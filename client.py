@@ -26,7 +26,7 @@ class MCPClient:
             raise ValueError("GEMINI_API_KEY environment variable not set.")
         
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-1.5-pro")
+        self.model = genai.GenerativeModel("gemini-2.0-flash")
 
         self.config_path = config_path
         self.all_tools: list[Dict[str, Any]] = []
@@ -68,7 +68,6 @@ class MCPClient:
             raise ValueError(f"Server {server_name} does not have a valid URL.")
         
         try:
-            print()
             streamable_transport = await self.exit_stack.enter_async_context(
                 streamablehttp_client(url, headers=headers)
             )
@@ -117,13 +116,17 @@ class MCPClient:
         # Group tools by server
         servers = {}
         summary_lines = ["Available Tools:"]
+       
         for tool in self.all_tools:
             server = tool['server']
             if server not in servers:
                 servers[server] = []
+
+        for tool in self.all_tools:
+            servers[tool['server']].append(tool)
             
         for server_name, tools in servers.items():
-            summary_lines.append(f"\nServer: {server_name}")
+            summary_lines.append(f"\nServer: {server_name} with {len(tools)} tools:")
             for tool in tools:
                 summary_lines.append(f"  - {tool['original_name']}: {tool['description']}")
         return "\n".join(summary_lines)
@@ -134,17 +137,19 @@ class MCPClient:
 
         # Prepare tools for Gemini funtion calling
         gemini_tools = []
+        print("Preparing tools for Gemini function calling...")
+        print(len(self.all_tools), "tools found.")
         for tool in self.all_tools:
             function_declaration = genai.protos.FunctionDeclaration(
                 name = tool['name'],
-                desciption = tool['description'],
+                description = tool['description'],
                 parameters = genai.protos.Schema(
                     type = genai.protos.Type.OBJECT,
                     properties = { 
                         prop_name: genai.protos.Schema(
-                            type=self._convert_json_type_to_genai(prop_schema),
-                            description=prop_desc
-                        ) for prop_name, (prop_schema, prop_desc) in tool['input_schema'].get('properties', {}).items()
+                            type=self._convert_json_type_to_genai(prop_schema.get('type', 'string')),
+                            description=prop_schema.get('description', '' )
+                        ) for prop_name, prop_schema in tool['input_schema'].get('properties', {}).items()
                     },
                     required = tool['input_schema'].get('required', [])
                 )
@@ -156,47 +161,49 @@ class MCPClient:
                     mode=genai.protos.FunctionCallingConfig.Mode.AUTO
                 )
             )
+        
+        print(len(gemini_tools), "tools prepared for Gemini function calling.")
 
-            try:
-                chat = self.model.start_chat(enable_automtic_function_calling=True)
+        try:
+            chat = self.model.start_chat(enable_automatic_function_calling=True)
 
-                response = await asyncio.to_thread(
-                    chat.send_message,
-                    query,
-                    tools=gemini_tools,
-                    tool_config=tool_config,
-                )
+            response = await asyncio.to_thread(
+                chat.send_message,
+                query,
+                tools=gemini_tools,
+                tool_config=tool_config,
+            )
 
-                final_text = []
+            final_text = []
 
-                if response.candidates and response.candidates[0].content.parts:
-                    for part in response.candidates[0].content.parts:
-                        if hasattr(part, 'text'):
-                            final_text.append(part.text)
-                        elif hasattr(part, 'function_call'):
-                            tool_result = await self._execute_gemini_tool_call(part.function_call)
-                            if tool_result:
-                                function_response = genai.protos.Part(
-                                    function_response=genai.protos.FunctionResponse(
-                                        name=part.function_call.name,
-                                        response={"result"  : tool_result}
-                                    )
+            if response.candidates and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    if hasattr(part, 'text'):
+                        final_text.append(part.text)
+                    elif hasattr(part, 'function_call'):
+                        tool_result = await self._execute_gemini_tool_call(part.function_call)
+                        if tool_result:
+                            function_response = genai.protos.Part(
+                                function_response=genai.protos.FunctionResponse(
+                                    name=part.function_call.name,
+                                    response={"result"  : tool_result}
                                 )
+                            )
 
-                                follow_up_response = await asyncio.to_thread(
-                                    chat.send_message,
-                                    function_response
-                                )
+                            follow_up_response = await asyncio.to_thread(
+                                chat.send_message,
+                                function_response
+                            )
 
-                                if follow_up_response.candidates and follow_up_response.candidates[0].content.parts:
-                                    for follow_up_part in follow_up_response.candidates[0].content.parts:
-                                        if hasattr(follow_up_part, 'text') and follow_up_part.text:
-                                            final_text.append(follow_up_part.text)
+                            if follow_up_response.candidates and follow_up_response.candidates[0].content.parts:
+                                for follow_up_part in follow_up_response.candidates[0].content.parts:
+                                    if hasattr(follow_up_part, 'text') and follow_up_part.text:
+                                        final_text.append(follow_up_part.text)
 
-                return "\n".join(final_text) if final_text else "No response generated."
-            
-            except Exception as e:
-                return f"Error processing query: {e}"
+            return "\n".join(final_text) if final_text else "No response generated."
+        
+        except Exception as e:
+            return f"Error processing query: {e}"
             
     def _convert_json_type_to_genai(self, json_type: str) -> genai.protos.Type:
         mapping = {
