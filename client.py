@@ -185,10 +185,7 @@ class MCPClient:
                                 )
                             )
 
-                            follow_up_response = await asyncio.to_thread(
-                                chat.send_message,
-                                function_response
-                            )
+                            follow_up_response = chat.send_message(function_response)
 
                             if follow_up_response.candidates and follow_up_response.candidates[0].content.parts:
                                 for follow_up_part in follow_up_response.candidates[0].content.parts:
@@ -222,8 +219,6 @@ class MCPClient:
         elif json_type == 'boolean':
             return genai.protos.Schema(type=genai.protos.Type.BOOLEAN, description=description)
         elif json_type == 'array':
-            # This is where the bug is. We must handle the 'items' field.
-            # The 'items' key is a schema itself, so we must recurse.
             item_schema = prop_schema.get('items', {})
             return genai.protos.Schema(
                 type=genai.protos.Type.ARRAY,
@@ -231,7 +226,6 @@ class MCPClient:
                 items=self._convert_json_type_to_genai(item_schema)
             )
         elif json_type == 'object':
-            # Handle nested objects by recursively converting their properties.
             properties = {
                 prop_name: self._convert_json_type_to_genai(prop_val)
                 for prop_name, prop_val in prop_schema.get('properties', {}).items()
