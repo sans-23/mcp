@@ -146,32 +146,27 @@ class MCPClient:
                 parameters = genai.protos.Schema(
                     type = genai.protos.Type.OBJECT,
                     properties = { 
-                        prop_name: genai.protos.Schema(
-                            type=self._convert_json_type_to_genai(prop_schema.get('type', 'string')),
-                            description=prop_schema.get('description', '' )
-                        ) for prop_name, prop_schema in tool['input_schema'].get('properties', {}).items()
+                        prop_name: self._convert_json_type_to_genai(prop_schema)
+                        for prop_name, prop_schema in tool['input_schema'].get('properties', {}).items()
                     },
                     required = tool['input_schema'].get('required', [])
                 )
             )
             gemini_tools.append(function_declaration)
-
-            tool_config = genai.protos.ToolConfig(
-                function_calling_config=genai.protos.FunctionCallingConfig(
-                    mode=genai.protos.FunctionCallingConfig.Mode.AUTO
-                )
-            )
         
         print(len(gemini_tools), "tools prepared for Gemini function calling.")
 
         try:
             chat = self.model.start_chat(enable_automatic_function_calling=True)
 
-            response = await asyncio.to_thread(
-                chat.send_message,
+            response = chat.send_message(
                 query,
                 tools=gemini_tools,
-                tool_config=tool_config,
+                tool_config=genai.protos.ToolConfig(
+                    function_calling_config=genai.protos.FunctionCallingConfig(
+                        mode=genai.protos.FunctionCallingConfig.Mode.AUTO
+                    )
+                )
             )
 
             final_text = []
@@ -205,16 +200,52 @@ class MCPClient:
         except Exception as e:
             return f"Error processing query: {e}"
             
-    def _convert_json_type_to_genai(self, json_type: str) -> genai.protos.Type:
-        mapping = {
-            "string": genai.protos.Type.STRING,
-            "number": genai.protos.Type.NUMBER,
-            "integer": genai.protos.Type.INTEGER,
-            "boolean": genai.protos.Type.BOOLEAN,
-            "array": genai.protos.Type.ARRAY,
-            "object": genai.protos.Type.OBJECT,
-        }
-        return mapping.get(json_type, genai.protos.Type.STRING)
+    def _convert_json_type_to_genai(self, prop_schema: str) -> genai.protos.Schema:
+        """
+        Recursively converts a JSON schema type definition to a genai.protos.Schema.
+
+        Args:
+            prop_schema: The JSON schema dictionary for a property.
+
+        Returns:
+            A genai.protos.Schema object.
+        """
+        json_type = prop_schema.get('type')
+        description = prop_schema.get('description', '')
+
+        if json_type == 'string':
+            return genai.protos.Schema(type=genai.protos.Type.STRING, description=description)
+        elif json_type == 'integer':
+            return genai.protos.Schema(type=genai.protos.Type.INTEGER, description=description)
+        elif json_type == 'number':
+            return genai.protos.Schema(type=genai.protos.Type.NUMBER, description=description)
+        elif json_type == 'boolean':
+            return genai.protos.Schema(type=genai.protos.Type.BOOLEAN, description=description)
+        elif json_type == 'array':
+            # This is where the bug is. We must handle the 'items' field.
+            # The 'items' key is a schema itself, so we must recurse.
+            item_schema = prop_schema.get('items', {})
+            return genai.protos.Schema(
+                type=genai.protos.Type.ARRAY,
+                description=description,
+                items=self._convert_json_type_to_genai(item_schema)
+            )
+        elif json_type == 'object':
+            # Handle nested objects by recursively converting their properties.
+            properties = {
+                prop_name: self._convert_json_type_to_genai(prop_val)
+                for prop_name, prop_val in prop_schema.get('properties', {}).items()
+            }
+            return genai.protos.Schema(
+                type=genai.protos.Type.OBJECT,
+                description=description,
+                properties=properties,
+                required=prop_schema.get('required', [])
+            )
+        else:
+            # Default to STRING for unknown types.
+            return genai.protos.Schema(type=genai.protos.Type.STRING, description=description)
+      
             
     async def _execute_gemini_tool_call(self, function_call: genai.protos.FunctionCall) -> Any:
         tool_name = function_call.name
