@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 class MCPClient:
     def __init__(self, config_path: str = "mcp.json"):
-        self.seesions: Dict[str, ClientSession] = {}
+        self.sessions: Dict[str, ClientSession] = {}
         self.exit_stack = AsyncExitStack()
 
         load_dotenv()
@@ -68,17 +68,18 @@ class MCPClient:
             raise ValueError(f"Server {server_name} does not have a valid URL.")
         
         try:
+            print()
             streamable_transport = await self.exit_stack.enter_async_context(
                 streamablehttp_client(url, headers=headers)
             )
 
-            read_stream, write_stream = streamable_transport
+            read_stream, write_stream, _ = streamable_transport
             session = await self.exit_stack.enter_async_context(
-                ClientSession(read_stream=read_stream, write_stream=write_stream)
+                ClientSession(read_stream, write_stream)
             )
             
             try:
-                await asyncio.wait_for(session.intialize(), timeout=self.timeout)
+                await asyncio.wait_for(session.initialize(), timeout=self.timeout)
             except asyncio.TimeoutError:
                 raise TimeoutError(f"Connection to {server_name} timed out.")
             except Exception as e:
@@ -103,7 +104,7 @@ class MCPClient:
                         "original_name": tool.name,
                         "server": server_name,
                         "description": tool.description,
-                        "input_schema": tool.input_schema,
+                        "input_schema": tool.inputSchema,
                     }
                     self.all_tools.append(tool_info)
             except Exception as e:
@@ -139,11 +140,11 @@ class MCPClient:
                 desciption = tool['description'],
                 parameters = genai.protos.Schema(
                     type = genai.protos.Type.OBJECT,
-                    properties = {
+                    properties = { 
                         prop_name: genai.protos.Schema(
-                            type = self._convert_json_type_to_genai(prop_schema.get('type', 'string')),
-                            description = prop_desc
-                        ) for prop_name, prop_desc in tool['input_schema'].get('properties', {}).items()
+                            type=self._convert_json_type_to_genai(prop_schema),
+                            description=prop_desc
+                        ) for prop_name, (prop_schema, prop_desc) in tool['input_schema'].get('properties', {}).items()
                     },
                     required = tool['input_schema'].get('required', [])
                 )
