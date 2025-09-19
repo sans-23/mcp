@@ -30,6 +30,7 @@ class MCPClient:
 
         self.config_path = config_path
         self.all_tools: list[Dict[str, Any]] = []
+        self.gemini_tools: list[genai.protos.FunctionDeclaration] = []
         self.connection_retries = 3
         self.timeout = 60
     
@@ -131,37 +132,18 @@ class MCPClient:
                 summary_lines.append(f"  - {tool['original_name']}: {tool['description']}")
         return "\n".join(summary_lines)
     
-    async def process_query(self, query: str) -> str:
+    def start_chat(self):
+        return self.model.start_chat(enable_automatic_function_calling=True)
+    
+    async def process_query(self, query: str, chat) -> str:
         if not self.all_tools:
             return "No tools available to process the query."
-
-        # Prepare tools for Gemini funtion calling
-        gemini_tools = []
-        print("Preparing tools for Gemini function calling...")
-        print(len(self.all_tools), "tools found.")
-        for tool in self.all_tools:
-            function_declaration = genai.protos.FunctionDeclaration(
-                name = tool['name'],
-                description = tool['description'],
-                parameters = genai.protos.Schema(
-                    type = genai.protos.Type.OBJECT,
-                    properties = { 
-                        prop_name: self._convert_json_type_to_genai(prop_schema)
-                        for prop_name, prop_schema in tool['input_schema'].get('properties', {}).items()
-                    },
-                    required = tool['input_schema'].get('required', [])
-                )
-            )
-            gemini_tools.append(function_declaration)
-        
-        print(len(gemini_tools), "tools prepared for Gemini function calling.")
-
         try:
-            chat = self.model.start_chat(enable_automatic_function_calling=True)
+            # chat = self.model.start_chat(enable_automatic_function_calling=True)
 
             response = chat.send_message(
                 query,
-                tools=gemini_tools,
+                tools=self.gemini_tools,
                 tool_config=genai.protos.ToolConfig(
                     function_calling_config=genai.protos.FunctionCallingConfig(
                         mode=genai.protos.FunctionCallingConfig.Mode.AUTO
@@ -277,6 +259,25 @@ class MCPClient:
         
     
     async def list_all_tools(self) -> None:
+        # Prepare tools for Gemini funtion calling
+        print("Preparing tools for Gemini function calling...")
+        print(len(self.all_tools), "tools found.")
+        for tool in self.all_tools:
+            function_declaration = genai.protos.FunctionDeclaration(
+                name = tool['name'],
+                description = tool['description'],
+                parameters = genai.protos.Schema(
+                    type = genai.protos.Type.OBJECT,
+                    properties = { 
+                        prop_name: self._convert_json_type_to_genai(prop_schema)
+                        for prop_name, prop_schema in tool['input_schema'].get('properties', {}).items()
+                    },
+                    required = tool['input_schema'].get('required', [])
+                )
+            )
+            self.gemini_tools.append(function_declaration)
+        
+        print(len(self.gemini_tools), "tools prepared for Gemini function calling.")
         print(self.get_tools_summary())
 
     async def get_server_status(self) ->str:
@@ -329,11 +330,12 @@ async def main():
     try:
         await client.connect_to_servers()
         await client.list_all_tools()
+        chat = client.start_chat()
         while True:
             query = input("\nEnter your query (or 'exit' to quit): ")
             if query.lower() in ['exit', 'quit']:
                 break
-            response = await client.process_query(query)
+            response = await client.process_query(query, chat)
             print(f"\nResponse:\n{response}")
     except Exception as e:
         print(f"Error: {e}")
@@ -347,6 +349,3 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\nClient interrupted and shutting down.")
         sys.exit(0)
-        
-                        
-        
