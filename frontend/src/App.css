@@ -219,7 +219,7 @@ body {
   background-color: var(--bg-primary);
   max-width: 960px;
   width: 100%;
-  margin: 0 auto;
+  margin: 0 auto 1.5rem auto;
 }
 
 .input-wrapper {
