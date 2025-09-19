@@ -1,0 +1,91 @@
+/* src/App.css */
+
+/* Define dark theme variables */
+:root {
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b3b8;
+  --bubble-ai: #303030;
+  --bubble-user: #0066d4;
+  --input-bg: #2b2b2b;
+  --border-color: #3b3b3b;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; /* Changed height to min-height for better scrolling */
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 768px; /* ⬅️ Fixed max-width for desktop view */
+  height: 80vh;
+  background-color: var(--bg-secondary);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  margin: auto; /* ⬅️ Centers the container horizontally */
+}
+
+/* ... existing styles for messages-list, message-bubble, etc. ... */
+.message-bubble.ai {
+  /* ... existing styles ... */
+  border-bottom-left-radius: 5px;
+}
+.message-bubble.user {
+  /* ... existing styles ... */
+  border-bottom-right-radius: 5px;
+}
+.message-input-form {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid var(--border-color);
+}
+.message-input-form input {
+  flex-grow: 1;
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 10px 15px;
+  font-size: 16px;
+  outline: none;
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+}
+.message-input-form button {
+  background-color: var(--bubble-user);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 20px;
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s;
+}
+.message-input-form button:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+.message-input-form button:disabled {
+  background-color: #b3b3b3;
+  cursor: not-allowed;
+}
+
+/* ⬅️ Add a media query for mobile devices */
+@media (max-width: 768px) {
+  .chat-container {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}

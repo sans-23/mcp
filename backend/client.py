@@ -5,7 +5,7 @@ import os
 import sys
 from contextlib import AsyncExitStack
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 from mcp import ClientSession
@@ -27,6 +27,10 @@ class MCPClient:
         
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel("gemini-2.0-flash")
+
+        # chat state management
+        self.chats: Dict[str, genai.ChatSession] = {}
+        self.chat_history_file = "chat_history.json"
 
         self.config_path = config_path
         self.all_tools: list[Dict[str, Any]] = []
@@ -132,14 +136,48 @@ class MCPClient:
                 summary_lines.append(f"  - {tool['original_name']}: {tool['description']}")
         return "\n".join(summary_lines)
     
+    async def get_or_create_chat_session(self, chat_id: Optional[str] = None) -> tuple[str, genai.ChatSession]:
+        if chat_id and chat_id in self.chats:
+            chat = self.chats[chat_id]
+            print(f"Resuming chat with ID: {chat_id}")
+            return chat_id, chat
+        
+        # New chat session logic
+        new_chat_id = os.urandom(8).hex()
+        new_chat = self.model.start_chat(enable_automatic_function_calling=True)
+        self.chats[new_chat_id] = new_chat
+        print(f"Created new chat with ID: {new_chat_id}")
+        return new_chat_id, new_chat
+    
+    async def _save_chat_history(self, chat_id: str, query: str, response: str) -> None:
+        try:
+            if os.path.exists(self.chat_history_file):
+                with open(self.chat_history_file, 'r') as f:
+                    chat_data = json.load(f)
+            else:
+                chat_data = {}
+
+            if chat_id not in chat_data:
+                chat_data[chat_id] = []
+
+            chat_data[chat_id].append({"query": query, "response": response})
+
+            with open(self.chat_history_file, 'w') as f:
+                json.dump(chat_data, f, indent=4)
+        except Exception as e:
+            print(f"Failed to save chat history: {e}")
+    
     def start_chat(self):
         return self.model.start_chat(enable_automatic_function_calling=True)
     
-    async def process_query(self, query: str, chat) -> str:
+    async def process_query(self, chat_id: str, query: str) -> str:
         if not self.all_tools:
             return "No tools available to process the query."
         try:
-            # chat = self.model.start_chat(enable_automatic_function_calling=True)
+            chat = self.chats.get(chat_id)
+
+            if not chat:
+                return f"Chat session with ID {chat_id} not found."
 
             response = chat.send_message(
                 query,
