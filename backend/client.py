@@ -7,12 +7,11 @@ from contextlib import AsyncExitStack
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import httpx
-from mcp import ClientSession
-from mcp.client.streamable_http import streamablehttp_client
+from mcp import ClientSession # type: ignore
+from mcp.client.streamable_http import streamablehttp_client # type: ignore
 
-import google.generativeai as genai
-from dotenv import load_dotenv
+import google.generativeai as genai # type: ignore
+from dotenv import load_dotenv # type: ignore
 
 class MCPClient:
     def __init__(self, config_path: str = "mcp.json"):
@@ -168,7 +167,7 @@ class MCPClient:
             print(f"Failed to save chat history: {e}")
     
     def start_chat(self):
-        return self.model.start_chat(enable_automatic_function_calling=True)
+        return self.model.start_chat(enable_automatic_function_calling=False)
     
     async def process_query(self, chat_id: str, query: str) -> str:
         if not self.all_tools:
@@ -189,11 +188,15 @@ class MCPClient:
                 )
             )
 
+            print(response)
+
             final_text = []
 
             if response.candidates and response.candidates[0].content.parts:
                 for part in response.candidates[0].content.parts:
-                    if hasattr(part, 'text'):
+                    print(part)
+                    print(hasattr(part, 'function_call'))
+                    if hasattr(part, 'text') and part.text!="":
                         final_text.append(part.text)
                     elif hasattr(part, 'function_call'):
                         tool_result = await self._execute_gemini_tool_call(part.function_call)
@@ -263,7 +266,9 @@ class MCPClient:
             
     async def _execute_gemini_tool_call(self, function_call: genai.protos.FunctionCall) -> Any:
         tool_name = function_call.name
-        tool_args = function_call.arguments
+        tool_args = function_call.args
+
+        print(f"Invoking tool: {tool_name} with arguments: {tool_args}")
 
         # Find the corresponding tool
         tool_info = next((tool for tool in self.all_tools if tool['name'] == tool_name), None)
@@ -362,28 +367,3 @@ class MCPClient:
             await self.exit_stack.aclose()
         except Exception as e:
             print(f"Error during cleanup: {e}")
-
-async def main():
-    client = MCPClient()
-    try:
-        await client.connect_to_servers()
-        await client.list_all_tools()
-        chat = client.start_chat()
-        while True:
-            query = input("\nEnter your query (or 'exit' to quit): ")
-            if query.lower() in ['exit', 'quit']:
-                break
-            response = await client.process_query(query, chat)
-            print(f"\nResponse:\n{response}")
-    except Exception as e:
-        print(f"Error: {e}")
-    finally:
-        await client.cleanup()
-        print("Client shutdown complete.")
-
-if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        print("\nClient interrupted and shutting down.")
-        sys.exit(0)
