@@ -129,9 +129,9 @@ body {
 
 .chat-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   background-color: var(--bg-primary);
   max-width: 960px;
   width: 100%;
