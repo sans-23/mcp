@@ -103,6 +103,10 @@ body {
   transition: background-color 0.2s;
 }
 
+.chat-history-item.selected {
+  background-color: var(--bg-secondary);
+}
+
 .chat-history-item:hover {
   background-color: var(--bg-secondary);
 }
@@ -125,9 +129,9 @@ body {
 
 .chat-header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 1.5rem;
   background-color: var(--bg-primary);
   max-width: 960px;
   width: 100%;
