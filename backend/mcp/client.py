@@ -15,7 +15,7 @@ from sqlalchemy.exc import SQLAlchemyError # type: ignore
 
 from mcp import ClientSession # type: ignore
 from mcp.client.streamable_http import streamablehttp_client # type: ignore
-from models import ChatSession, ChatMessage
+from backend.models.models import ChatSession, ChatMessage
 
 class MCPClient:
     def __init__(self, config_path: str = "mcp.json"):

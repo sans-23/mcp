@@ -6,11 +6,13 @@ from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession # type: ignore
 from sqlalchemy.future import select # type: ignore
 
-from client import MCPClient
-from api_models import ChatRequest, ChatResponse, ChatHistoryResponse, MessageResponse
+from backend.mcp.client import MCPClient
+from backend.models.api_models import ChatRequest, ChatResponse, ChatHistoryResponse, MessageResponse
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from database import engine, Base, get_db_session
-from models import ChatSession, ChatMessage
+from backend.models.models import ChatSession, ChatMessage
+
+from sqlalchemy import delete # type: ignore
 
 # Global client instance
 client: Optional[MCPClient] = None
@@ -24,6 +26,7 @@ async def lifespan(app: FastAPI):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         await client.connect_to_servers()
+        print("Connected to MCP servers.")
         await client.list_all_tools()
         yield
     except Exception as e:
@@ -105,6 +108,32 @@ async def get_chat_history(chat_id: str, db: AsyncSession = Depends(get_db_sessi
         raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving chat history: {e}")
+    
+@app.delete("/chat/{chat_id}")
+async def delete_chat(chat_id: str, db: AsyncSession = Depends(get_db_session)):
+    """
+    Deletes a specific chat session and all its messages.
+    """
+    try:
+        # First, delete all messages associated with the chat_id
+        await db.execute(delete(ChatMessage).where(ChatMessage.chat_session_id == chat_id))
+        
+        # Then, delete the chat session itself
+        result = await db.execute(delete(ChatSession).where(ChatSession.id == chat_id).returning(ChatSession.id))
+        
+        deleted_id = result.scalar_one_or_none()
+        
+        if not deleted_id:
+            raise HTTPException(status_code=404, detail="Chat session not found.")
+            
+        await db.commit()
+        
+        return {"message": f"Chat session {deleted_id} and its messages have been successfully deleted."}
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting chat: {e}")
 
 if __name__ == "__main__":
     import uvicorn # type: ignore
