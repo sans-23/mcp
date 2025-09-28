@@ -1,5 +1,5 @@
 from typing import Optional
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI # type: ignore
 
 def initialize_llm(api_key: str, base_url: str, model_name: str) -> Optional[ChatOpenAI]:
     """Initializes and returns a ChatOpenAI instance."""

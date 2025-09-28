@@ -1,5 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Depends # type: ignore
+from sqlalchemy.ext.asyncio import AsyncSession # type: ignore
 from schemas.chat import SessionCreate, ChatSessionResponse, MessageRequest, MessageResponse, SessionListResponse, ChatMessageResponse
 from crud import chat as chat_crud
 from crud import user as user_crud

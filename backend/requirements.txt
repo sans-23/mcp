@@ -8,3 +8,6 @@ sqlalchemy[asyncio]
 pypdf
 langchain
 chromadb
+langchain-community
+langchain-openai
+sentence-transformers

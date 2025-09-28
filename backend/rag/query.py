@@ -1,10 +1,9 @@
 import argparse
-from langchain_chroma import Chroma
-from langchain.prompts import ChatPromptTemplate
-from langchain_community.llms.ollama import Ollama
-from langchain_huggingface import HuggingFaceEmbeddings
-
-from langchain_openai import ChatOpenAI
+from langchain_chroma import Chroma # type: ignore
+from langchain.prompts import ChatPromptTemplate # type: ignore
+from langchain_community.llms.ollama import Ollama # type: ignore
+from langchain_huggingface import HuggingFaceEmbeddings # type: ignore
+from langchain_openai import ChatOpenAI # type: ignore
 
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 

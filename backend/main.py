@@ -7,6 +7,8 @@ from api.v1.api import api_router
 from services.llm import initialize_llm
 from services.tools import setup_tools
 from services.agent import initialize_global_agent
+from services.rag import populate_vector_database
+import os
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +22,14 @@ async def lifespan(app: FastAPI):
         config.LLM_MODEL_NAME
     )
     tools_list = await setup_tools()
+
+    # Initialize RAG database
+    pdf_path = "rag/data/monopoly.pdf"  # Adjust path as necessary
+    if os.path.exists(pdf_path):
+        await populate_vector_database(pdf_path)
+    else:
+        print(f"Warning: PDF file not found at {pdf_path}. RAG database will not be populated.")
+
     if llm_instance:
         await initialize_global_agent(
             llm_instance, 
