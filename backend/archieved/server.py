@@ -10,7 +10,7 @@ from backend.mcp.client import MCPClient
 from backend.models.api_models import ChatRequest, ChatResponse, ChatHistoryResponse, MessageResponse
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from database import engine, Base, get_db_session
-from backend.models.models import ChatSession, ChatMessage
+from backend.models.db_models import ChatSession, ChatMessage
 
 from sqlalchemy import delete # type: ignore
 

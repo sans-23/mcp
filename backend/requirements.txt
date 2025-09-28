@@ -57,3 +57,12 @@ langchain
 chromadb
 pytest
 boto3
+fastapi
+uvicorn
+sqlalchemy[asyncio]
+psycopg2-binary
+python-dotenv
+langchain
+langchain-openai
+langchain-mcp-adapters
+aiosqlite
