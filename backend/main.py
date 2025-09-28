@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from core import config
-import services.services as services
 from db.base import Base
 from db.session import engine
 from api.v1.api import api_router
+from services.llm import initialize_llm
+from services.tools import setup_tools
+from services.agent import initialize_global_agent
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -12,16 +14,16 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    services.llm = services.initialize_llm(
+    llm_instance = initialize_llm(
         config.OPENROUTER_API_KEY, 
         config.OPENROUTER_BASE_URL, 
         config.LLM_MODEL_NAME
     )
-    services.tools = await services.setup_tools()
-    if services.llm:
-        services.agent_executor = services.create_mcp_agent_executor(
-            services.llm, 
-            services.tools
+    tools_list = await setup_tools()
+    if llm_instance:
+        await initialize_global_agent(
+            llm_instance, 
+            tools_list
         )
     yield
 

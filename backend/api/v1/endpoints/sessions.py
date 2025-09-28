@@ -4,7 +4,8 @@ from schemas.chat import SessionCreate, ChatSessionResponse, MessageRequest, Mes
 from crud import chat as chat_crud
 from crud import user as user_crud
 from db.session import get_db_session
-import backend.services.services as services
+from services.agent import get_agent_response, agent_executor
+from services.message_converter import db_messages_to_lc_messages
 
 router = APIRouter()
 
@@ -14,7 +15,7 @@ async def create_session(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Starts a new chat session for a user."""
-    if services.agent_executor is None:
+    if agent_executor is None:
         raise HTTPException(status_code=503, detail="Agent is not initialized.")
         
     user = await user_crud.get_user_by_id(db, session_data.user_id)
@@ -25,8 +26,8 @@ async def create_session(
         db, session_data.user_id, session_data.initial_message
     )
     
-    ai_response_text, tool_names_used = await services.get_agent_response(
-        services.agent_executor, session_data.initial_message, []
+    ai_response_text, tool_names_used = await get_agent_response(
+        agent_executor, session_data.initial_message, []
     )
     
     await chat_crud.add_ai_message_to_session(
@@ -50,7 +51,7 @@ async def send_message(
     db: AsyncSession = Depends(get_db_session)
 ):
     """Sends a new message to an existing chat session."""
-    if services.agent_executor is None:
+    if agent_executor is None:
         raise HTTPException(status_code=503, detail="Agent is not initialized.")
         
     session = await chat_crud.get_chat_session(db, message_data.session_id)
@@ -61,14 +62,14 @@ async def send_message(
         raise HTTPException(status_code=403, detail="Forbidden: User ID does not match session owner.")
         
     history_records = await chat_crud.get_chat_messages(db, message_data.session_id)
-    lc_history = services.db_messages_to_lc_messages(history_records)
+    lc_history = db_messages_to_lc_messages(history_records)
     
     user_message = await chat_crud.add_user_message_to_session(
         db, message_data.session_id, message_data.content
     )
     
-    ai_response_text, tool_names_used = await services.get_agent_response(
-        services.agent_executor, message_data.content, lc_history
+    ai_response_text, tool_names_used = await get_agent_response(
+        agent_executor, message_data.content, lc_history
     )
     
     ai_message = await chat_crud.add_ai_message_to_session(
