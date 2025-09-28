@@ -9,6 +9,7 @@ from services.tools import setup_tools
 from services.agent import initialize_global_agent
 from services.rag import populate_vector_database
 import os
+from fastapi.middleware.cors import CORSMiddleware # type: ignore
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -53,6 +54,21 @@ app = FastAPI(
     description="A service for managing stateful chat sessions with a tool-using LangChain agent.",
     version="1.0.0",
     lifespan=lifespan
+)
+
+# Define allowed origins for your front-end
+origins = [
+    "http://localhost:5173", # Your React app's development server
+    "http://127.0.0.1:5173", # Another common local dev address
+    # Add your production front-end URL here when deploying
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router, prefix="/api/v1")
