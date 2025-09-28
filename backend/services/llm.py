@@ -4,8 +4,7 @@ from langchain_openai import ChatOpenAI # type: ignore
 def initialize_llm(api_key: str, base_url: str, model_name: str) -> Optional[ChatOpenAI]:
     """Initializes and returns a ChatOpenAI instance."""
     if not api_key or not base_url:
-        print("❌ WARNING: OPENROUTER_API_KEY or OPENROUTER_BASE_URL not set.")
-        return None
+        raise ValueError("OPENROUTER_API_KEY or OPENROUTER_BASE_URL not set.")
     try:
         llm_instance = ChatOpenAI(
             model=model_name,

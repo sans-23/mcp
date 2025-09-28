@@ -4,16 +4,16 @@ from langchain.tools import Tool # type: ignore
 from core import config
 from services.rag import query_vector_database
 
-async def _run_rag_query(query: str) -> str:
+async def _run_rag_query(query: str, llm: Any) -> str:
     """
     Runs a RAG query against the vector database and returns the results.
     """
-    docs = await query_vector_database(query)
+    docs, _ = await query_vector_database(query, llm)
     if docs:
-        return "\n\n".join([doc.page_content for doc in docs])
+        return docs
     return "No relevant information found in the knowledge base."
 
-async def setup_tools() -> List[Any]:
+async def setup_tools(llm: Any) -> List[Any]:
     """Sets up and returns a list of tools, including MCP-based ones and RAG tool."""
     mcp_tools = []
     try:
@@ -28,8 +28,8 @@ async def setup_tools() -> List[Any]:
 
     rag_tool = Tool(
         name="RAG_System",
-        func=_run_rag_query,
-        description="Useful for answering questions by retrieving information from a knowledge base. Input should be a clear and concise question."
+        func=lambda query: _run_rag_query(query, llm),
+        description="Doc for monopoly rules. Use this to answer questions about the rules of Monopoly.",
     )
-    
+
     return mcp_tools + [rag_tool]

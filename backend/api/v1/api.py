@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter # type: ignore
 from api.v1.endpoints import users, sessions
 
 api_router = APIRouter()

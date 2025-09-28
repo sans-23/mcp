@@ -1,22 +1,28 @@
-from fastapi import APIRouter, HTTPException, Depends # type: ignore
+from fastapi import APIRouter, HTTPException, Depends, Request # type: ignore # Import Request
 from sqlalchemy.ext.asyncio import AsyncSession # type: ignore
 from schemas.chat import SessionCreate, ChatSessionResponse, MessageRequest, MessageResponse, SessionListResponse, ChatMessageResponse
 from crud import chat as chat_crud
 from crud import user as user_crud
 from db.session import get_db_session
-from services.agent import get_agent_response, agent_executor
+from services.agent import get_agent_response # Removed _agent_executor import
+from langchain.agents import AgentExecutor # type: ignore
 from services.message_converter import db_messages_to_lc_messages
 
 router = APIRouter()
 
+async def get_agent_executor_dependency(request: Request) -> AgentExecutor:
+    executor = request.app.state.agent_executor
+    if executor is None:
+        raise HTTPException(status_code=503, detail="Agent is not initialized.")
+    return executor
+
 @router.post("/", response_model=ChatSessionResponse, status_code=201)
 async def create_session(
     session_data: SessionCreate, 
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency)
 ):
     """Starts a new chat session for a user."""
-    if agent_executor is None:
-        raise HTTPException(status_code=503, detail="Agent is not initialized.")
         
     user = await user_crud.get_user_by_id(db, session_data.user_id)
     if not user:
@@ -48,11 +54,10 @@ async def create_session(
 @router.post("/chat", response_model=MessageResponse)
 async def send_message(
     message_data: MessageRequest, 
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency)
 ):
     """Sends a new message to an existing chat session."""
-    if agent_executor is None:
-        raise HTTPException(status_code=503, detail="Agent is not initialized.")
         
     session = await chat_crud.get_chat_session(db, message_data.session_id)
     if not session:

@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI # type: ignore
 from contextlib import asynccontextmanager
 from core import config
 from db.base import Base
@@ -16,12 +16,17 @@ async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    llm_instance = initialize_llm(
-        config.OPENROUTER_API_KEY, 
-        config.OPENROUTER_BASE_URL, 
-        config.LLM_MODEL_NAME
-    )
-    tools_list = await setup_tools()
+    try:
+        llm_instance = initialize_llm(
+            config.OPENROUTER_API_KEY, 
+            config.OPENROUTER_BASE_URL, 
+            config.LLM_MODEL_NAME
+        )
+    except ValueError as e:
+        print(f"❌ Error initializing LLM: {e}")
+        llm_instance = None
+
+    tools_list = await setup_tools(llm_instance)
 
     # Initialize RAG database
     pdf_path = "rag/data/monopoly.pdf"  # Adjust path as necessary
@@ -30,11 +35,17 @@ async def lifespan(app: FastAPI):
     else:
         print(f"Warning: PDF file not found at {pdf_path}. RAG database will not be populated.")
 
+    print(llm_instance)
+
     if llm_instance:
-        await initialize_global_agent(
+        app.state.agent_executor = await initialize_global_agent(
             llm_instance, 
             tools_list
         )
+        if app.state.agent_executor is None:
+            print("❌ Agent Executor was not created.")
+    else:
+        print("❌ Agent not initialized due to LLM initialization failure.")
     yield
 
 app = FastAPI(

@@ -3,9 +3,6 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
-from models.chat import ChatMessage
-
-agent_executor: Optional[AgentExecutor] = None
 
 def create_mcp_agent_executor(llm_instance: ChatOpenAI, tools_list: List[Any]) -> Optional[AgentExecutor]:
     """Creates and returns an agent executor."""
@@ -26,9 +23,9 @@ def create_mcp_agent_executor(llm_instance: ChatOpenAI, tools_list: List[Any]) -
     print("✅ Agent Executor created successfully.")
     return executor
 
-async def initialize_global_agent(llm_instance: ChatOpenAI, tools_list: List[Any]):
-    global agent_executor
-    agent_executor = create_mcp_agent_executor(llm_instance, tools_list)
+async def initialize_global_agent(llm_instance: ChatOpenAI, tools_list: List[Any]) -> Optional[AgentExecutor]:
+    executor = create_mcp_agent_executor(llm_instance, tools_list)
+    return executor
 
 async def get_agent_response(agent_executor: AgentExecutor, user_input: str, chat_history: List[BaseMessage]) -> Tuple[str, List[str]]:
     """Gets a response from the agent and returns the text and tools used."""
