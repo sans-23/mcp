@@ -1,34 +1,20 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, Union
+from pydantic import BaseModel, Field # type: ignore
+from typing import Optional, List, Dict, Any, Union, Literal
 from datetime import datetime
 
-class QandAProps(BaseModel):
-    """Properties for a simple text/Q&A component."""
-    content: str = Field(..., description="The main text content.")
+class TextBlock(BaseModel):
+    block_type: Literal["text"] = Field("text", description="Markdown text block best for general information.")
+    title: Optional[str] = Field(None, description="Optional title for the text block.")
+    text: str = Field(..., description="The markdown text content.")
 
-class TableProps(BaseModel):
-    """Properties for a tabular data component."""
-    columns: List[Dict[str, Any]] = Field(..., description="A list of column definitions.")
-    rows: List[Dict[str, Any]] = Field(..., description="The list of data rows.")
+class ReactBlock(BaseModel):
+    block_type: Literal["react"] = Field("react", description="React component block for custom rendering and complex visualizations.")
+    title: Optional[str] = Field(None, description="Optional title for the React block.")
+    description: Optional[str] = Field(None, description="One-liner description of the React component shows.")
+    code: str = Field(..., description="Raw React component code (JSX) that can be rendered in React.")
 
-class CodeProps(BaseModel):
-    """Properties for a code block component."""
-    code: str = Field(..., description="The code to be displayed.")
-    language: Optional[str] = Field(None, description="The programming language for syntax highlighting.")
-
-class ImageProps(BaseModel):
-    """Properties for an image component."""
-    url: str = Field(..., description="The URL of the image.")
-    alt_text: str = Field(..., description="Alternative text for accessibility.")
-
-class Superclass(BaseModel):
-    """The main response schema, which can be any of the component types."""
-    response: Union[
-        QandAProps,
-        TableProps,
-        CodeProps,
-        ImageProps
-    ] = Field(..., description="The structured response in a format that best fits the user's query.")
+class LLMOutputBlock(BaseModel):
+    blocks: List[Union[TextBlock, ReactBlock]] = Field(..., description="List of content blocks in the LLM output.")
 
 class ChatRequest(BaseModel):
     query: str = Field(..., description="The user's query.")
