@@ -1,10 +1,21 @@
 import React from 'react';
 import { MenuIcon, MessageSquareTextIcon, Plus } from 'lucide-react';
 
+interface ChatMessage { query: string; response: string; }
+
+interface ChatSession {
+    id: string;
+    user_id: number;
+    title: string;
+    created_at: string;
+    updated_at: string | null;
+    messages: ChatMessage[];
+}
+
 interface SideBarProps {
     isSidebarOpen: boolean;
     setIsSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
-    chatHistory: { [key: string]: { query: string; response: string; }[] };
+    chatHistory: { [key: string]: ChatSession };
     selectedChatId: string | null;
     handleChatSelection: (chatId: string) => void;
     handleNewChat: () => void;
@@ -12,9 +23,9 @@ interface SideBarProps {
 
 const SideBar: React.FC<SideBarProps> = ({ isSidebarOpen, setIsSidebarOpen, chatHistory, selectedChatId, handleChatSelection, handleNewChat }) => {
     const getChatTitle = (chatId: string) => {
-        const chat = chatHistory[chatId];
-        if (chat && chat[0] && chat[0].query) {
-            const title = chat[0].query;
+        const session = chatHistory[chatId];
+        if (session && session.title) {
+            const title = session.title;
             return title.length > 20 ? title.substring(0, 20) + '...' : title;
         }
         return 'New Chat';

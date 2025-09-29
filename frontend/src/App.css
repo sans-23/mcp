@@ -199,16 +199,146 @@ body {
   transition: all 0.3s ease-in-out;
   font-size: 0.875rem;
   line-height: 1.5;
+  background-color: var(--bg-secondary);
+  padding: 0.75rem 1rem;
+  border-radius: 1.2rem;
+  max-width: 70%;
+  word-wrap: break-word;
+  white-space: pre-wrap; /* Ensures newlines are respected */
+  color: var(--text-primary);
 }
 
 .message-row.user .message-bubble {
-  background-color: var(--bubble-user);
+  background-color: var(--bg-secondary);
   color: var(--text-primary);
 }
 
 .message-row.ai .message-bubble {
-  background-color: var(--bg-secondary);
+  background-color: #171618;
   color: var(--text-secondary);
+}
+
+.message-bubble.ai {
+  border-bottom-left-radius: 0.25rem;
+}
+
+.message-bubble.user {
+  background-color: var(--bubble-user);
+  border-bottom-right-radius: 0.25rem;
+}
+
+.message-bubble table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.message-bubble table th,
+.message-bubble table td {
+  border: 1px solid var(--border-color);
+  padding: 8px;
+}
+
+.message-bubble table th {
+  background-color: var(--input-bg);
+  text-align: left;
+}
+
+.message-bubble table tr:nth-child(even) {
+  background-color: #242424;
+}
+
+.message-bubble table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+.message-bubble p {
+  margin: 0;
+  padding: 0;
+}
+
+.message-bubble pre {
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+.message-bubble code {
+  font-family: 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.9em;
+}
+
+.message-bubble pre code {
+  display: block;
+}
+
+.message-bubble blockquote {
+  border-left: 4px solid var(--border-color);
+  padding-left: 10px;
+  color: var(--text-secondary);
+  margin: 10px 0;
+}
+
+.message-bubble ul,
+.message-bubble ol {
+  margin-left: 20px;
+  padding-left: 0;
+}
+
+.message-bubble li {
+  margin-bottom: 5px;
+}
+
+.message-bubble a {
+  color: #8ab4f8;
+  text-decoration: none;
+}
+
+.message-bubble a:hover {
+  text-decoration: underline;
+}
+
+.message-bubble h1,
+.message-bubble h2,
+.message-bubble h3,
+.message-bubble h4,
+.message-bubble h5,
+.message-bubble h6 {
+  color: var(--text-primary);
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+}
+
+.message-bubble hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1em 0;
+}
+
+.message-bubble img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px 0;
+}
+
+.message-bubble strong,
+.message-bubble b {
+  font-weight: bold;
+}
+
+.message-bubble em,
+.message-bubble i {
+  font-style: italic;
+}
+
+.message-bubble del {
+  text-decoration: line-through;
+}
+
+.message-bubble .react-markdown {
+  overflow-x: auto;
 }
 
 .input-form {
