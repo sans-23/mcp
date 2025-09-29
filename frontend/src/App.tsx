@@ -1,48 +1,67 @@
 import { useState, useRef, useEffect } from 'react';
-import { SendHorizonalIcon, MenuIcon, MessageSquareTextIcon, Plus } from 'lucide-react';
+import { SendHorizonalIcon } from 'lucide-react';
 import MessageBubble from './components/MessageBubble';
+import SideBar from './components/SideBar';
 import './App.css';
 
 function App() {
-    const chatData = {
-        "d97690fc37545ac0": [
-            { "query": "Who are you and what tools do you have access to?", "response": "I am Gemini, a large language model built by Google..." },
-            { "query": "I am sanskar, is sans-23 the owner?", "response": "I do not have enough information to answer the question. Could you please provide the repository name?" },
-            { "query": "intellilearn", "response": "OK. Is `sans-23` the owner of the `intellilearn` repository?" },
-            { "query": "intellilearn", "response": "Sorry, I am still a little confused. Is `sans-23` the owner of the `intellilearn` repository, or are you asking me to find out?" }
-        ],
-        "da4712dcff5f76e0": [
-            { "query": "intellilearn", "response": "What would you like to do with intellilearn? For example, are you looking for a repository or trying to create one?" },
-            { "query": "intellilearn2 create repo", "response": "I can help with that. What would you like the repository to be named?" },
-            { "query": "intellilearn2 is repo name, it should be public, basic readme.md, in my personal account", "response": "" },
-            { "query": "unstar intellilearn, owner sans-23", "response": "" },
-            { "query": "is it done? unstar intellilearn, owner sans-23", "response": "" },
-            { "query": "is it done?", "response": "Yes, unstarring intellilearn from sans-23 is done." }
-        ],
-        "e99622536ea9a039": [{ "query": "hi", "response": "Hi! How can I help you with GitHub today?" }]
-    };
-
     type ChatHistory = {
         [key: string]: { query: string; response: string; }[];
     };
     
-    const [chatHistory, setChatHistory] = useState<ChatHistory>(chatData);
-    const [selectedChatId, setSelectedChatId] = useState(Object.keys(chatData)[0]);
+    const [chatHistory, setChatHistory] = useState<ChatHistory>({});
+    const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
     const [messages, setMessages] = useState<{ text: string; sender: string; }[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
+    // Fetch chat sessions from the backend
+    useEffect(() => {
+        const fetchChatSessions = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/sessions/user/2'); // Assuming user_id is 2
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const sessions = data.sessions;
+
+                console.log('Fetched sessions:', sessions);
+
+                const formattedChatHistory: ChatHistory = {};
+                sessions.forEach((session: any) => {
+                    formattedChatHistory[session.id] = session.messages.map((msg: any) => ({
+                        query: msg.query,
+                        response: msg.response
+                    }));
+                });
+                setChatHistory(formattedChatHistory);
+                if (sessions.length > 0) {
+                    setSelectedChatId(sessions[0].id);
+                }
+            } catch (error) {
+                console.error('Error fetching chat sessions:', error);
+            }
+        };
+
+        fetchChatSessions();
+    }, []);
+
     // Update displayed messages when selectedChatId changes
     useEffect(() => {
-        const conversation = chatHistory[selectedChatId];
-        if (conversation) {
-            const formattedMessages = conversation.flatMap(entry => [
-                { text: entry.query, sender: 'user' },
-                { text: entry.response, sender: 'ai' }
-            ]);
-            setMessages(formattedMessages);
+        if (selectedChatId) {
+            const conversation = chatHistory[selectedChatId];
+            if (conversation) {
+                const formattedMessages = conversation.flatMap(entry => [
+                    { text: entry.query, sender: 'user' },
+                    { text: entry.response, sender: 'ai' }
+                ]);
+                setMessages(formattedMessages);
+            } else {
+                setMessages([]);
+            }
         } else {
             setMessages([]);
         }
@@ -51,7 +70,7 @@ function App() {
     // Update chat history in state on message send
     const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        if (!input.trim() || isLoading) return;
+        if (!input.trim() || isLoading || !selectedChatId) return;
 
         setIsLoading(true);
         const userMessage = { query: input, response: '' };
@@ -95,47 +114,36 @@ function App() {
         setSelectedChatId(chatId);
     };
     
-    const handleNewChat = () => {
-        const newChatId = Date.now().toString();
-        setChatHistory(prev => ({ ...prev, [newChatId]: [] }));
-        setSelectedChatId(newChatId);
-        setIsSidebarOpen(false); // Close sidebar on new chat
-    };
-
-    const getChatTitle = (chatId: string) => {
-      const chat = chatHistory[chatId];
-      if (chat && chat[0] && chat[0].query) {
-        const title = chat[0].query;
-        return title.length > 20 ? title.substring(0, 20) + '...' : title;
-      }
-      return 'New Chat';
+    const handleNewChat = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/sessions/user/2', { // Assuming user_id is 2
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: "New Chat" }), // Provide a default title
+            });
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const newSession = await response.json();
+            setChatHistory(prev => ({ ...prev, [newSession.id]: [] }));
+            setSelectedChatId(newSession.id);
+            setIsSidebarOpen(false); // Close sidebar on new chat
+        } catch (error) {
+            console.error('Error creating new chat session:', error);
+        }
     };
 
     return (
         <>
             <div className="app-wrapper">
-                {/* Sidebar */}
-                <aside className={`sidebar ${isSidebarOpen ? '' : 'closed'}`}>
-                    <div className={`sidebar-header ${isSidebarOpen ? '' : 'closed'}`}>
-                        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem' }}>
-                            <MenuIcon size={24} color="var(--text-primary)" />
-                        </button>
-                        {isSidebarOpen && (
-                            <button className="new-chat-button" onClick={handleNewChat}>
-                                <Plus size={20} />
-                                <span style={{ marginLeft: '0.5rem' }}>New Chat</span>
-                            </button>
-                        )}
-                    </div>
-                    <div className={`chat-history-list ${isSidebarOpen ? '' : 'hidden'}`}>
-                        {Object.keys(chatHistory).map((chatId) => (
-                            <div key={chatId} className={`chat-history-item ${selectedChatId === chatId ? 'selected' : ''}`} onClick={() => handleChatSelection(chatId)}>
-                                <MessageSquareTextIcon size={16} />
-                                <span className="chat-history-item-text">{getChatTitle(chatId)}</span>
-                            </div>
-                        ))}
-                    </div>
-                </aside>
+                <SideBar
+                    isSidebarOpen={isSidebarOpen}
+                    setIsSidebarOpen={setIsSidebarOpen}
+                    chatHistory={chatHistory}
+                    selectedChatId={selectedChatId}
+                    handleChatSelection={handleChatSelection}
+                    handleNewChat={handleNewChat}
+                />
 
                 {/* Main Chat Container */}
                 <div className="chat-container-main">
