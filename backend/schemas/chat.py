@@ -4,14 +4,12 @@ from datetime import datetime
 
 class TextBlock(BaseModel):
     block_type: Literal["text"] = Field("text", description="Markdown text block best for general information.")
-    title: Optional[str] = Field(None, description="Optional title for the text block.")
     text: str = Field(..., description="The markdown text content.")
 
 class ReactBlock(BaseModel):
     block_type: Literal["react"] = Field("react", description="React component block for custom rendering and complex visualizations.")
-    title: Optional[str] = Field(None, description="Optional title for the React block.")
     description: Optional[str] = Field(None, description="One-liner description of the React component shows.")
-    code: str = Field(..., description="Raw React component code (JSX) that can be rendered in React.")
+    code: str = Field(..., description="Raw React component code without import statement (JSX) that can be rendered in React.")
 
 class LLMOutputBlock(BaseModel):
     blocks: List[Union[TextBlock, ReactBlock]] = Field(..., description="List of content blocks in the LLM output.")

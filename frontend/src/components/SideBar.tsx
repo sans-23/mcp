@@ -1,7 +1,19 @@
 import React from 'react';
 import { MenuIcon, MessageSquareTextIcon, Plus } from 'lucide-react';
 
-interface ChatMessage { query: string; response: string; }
+interface TextBlock { block_type: "text"; text: string; }
+interface ReactBlock { block_type: "react"; description?: string; code: string; }
+interface LLMOutputBlock { blocks: (TextBlock | ReactBlock)[]; }
+
+type ApiMessageContent = TextBlock | LLMOutputBlock; // Content can be a TextBlock or LLMOutputBlock
+
+interface ApiMessage {
+    id: number;
+    chat_session_id: string;
+    role: 'user' | 'ai'; // Role can be 'user' or 'ai'
+    content: ApiMessageContent;
+    created_at: string;
+}
 
 interface ChatSession {
     id: string;
@@ -9,7 +21,7 @@ interface ChatSession {
     title: string;
     created_at: string;
     updated_at: string | null;
-    messages: ChatMessage[];
+    messages: ApiMessage[]; // Messages are now ApiMessage objects
 }
 
 interface SideBarProps {

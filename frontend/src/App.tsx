@@ -5,9 +5,11 @@ import SideBar from './components/SideBar';
 import './App.css';
 
 function App() {
-    type ChatMessage = { text: string; sender: string; }; // This is for the UI display
+    type TextBlock = { block_type: "text"; text: string; };
+    type ReactBlock = { block_type: "react"; description?: string; code: string; };
+    type LLMOutputBlock = { blocks: (TextBlock | ReactBlock)[]; };
 
-    type ApiMessageContent = { text: string; }; // Content is an object with a text property
+    type ApiMessageContent = TextBlock | LLMOutputBlock; // Content can be a TextBlock or LLMOutputBlock
 
     type ApiMessage = {
         id: number;
@@ -32,7 +34,7 @@ function App() {
     
     const [chatHistory, setChatHistory] = useState<ChatHistory>({});
     const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-    const [messages, setMessages] = useState<ChatMessage[]>([]); // Use ChatMessage for display
+    const [messages, setMessages] = useState<ApiMessage[]>([]); // Use ApiMessage for display
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -81,11 +83,7 @@ function App() {
                 // Check if messages are already loaded in chatHistory for this session
                 const currentSession = chatHistory[selectedChatId];
                 if (currentSession && currentSession.messages && currentSession.messages.length > 0) {
-                    const formattedMessages = currentSession.messages.map(apiMsg => ({
-                        text: apiMsg.content.text,
-                        sender: apiMsg.role
-                    }));
-                    setMessages(formattedMessages);
+                    setMessages(currentSession.messages);
                     setIsLoading(false);
                     return;
                 }
@@ -106,15 +104,17 @@ function App() {
                     } as ChatSession,
                 }));
 
-                const formattedMessages = sessionDetail.messages.map(apiMsg => ({
-                    text: apiMsg.content.text,
-                    sender: apiMsg.role
-                }));
-                setMessages(formattedMessages);
+                setMessages(sessionDetail.messages);
 
             } catch (error) {
                 console.error('Error fetching session messages:', error);
-                setMessages([{ text: 'Error: Could not load messages for this session.', sender: 'ai' }]);
+                setMessages([{ 
+                    id: Date.now(), 
+                    chat_session_id: selectedChatId || '', 
+                    role: 'ai', 
+                    content: { block_type: "text", text: 'Error: Could not load messages for this session.' },
+                    created_at: new Date().toISOString()
+                }]);
             } finally {
                 setIsLoading(false);
             }
@@ -134,7 +134,7 @@ function App() {
             id: Date.now(), // Temporary ID
             chat_session_id: selectedChatId,
             role: 'user',
-            content: { text: input },
+            content: { block_type: "text", text: input }, // Use TextBlock structure
             created_at: new Date().toISOString()
         };
 
@@ -163,12 +163,12 @@ function App() {
             }
 
             const data = await response.json();
-            const aiResponseContent = data.response; // Assuming data.response is the AI's text response
+            const aiResponseContent = data.ai_response.content; // Assuming data.ai_response.content is the LLMOutputBlock
             const aiApiMessage: ApiMessage = { 
                 id: Date.now(), // Temporary ID
                 chat_session_id: selectedChatId,
                 role: 'ai',
-                content: { text: aiResponseContent },
+                content: aiResponseContent, // Directly assign the LLMOutputBlock
                 created_at: new Date().toISOString()
             };
             
@@ -192,8 +192,8 @@ function App() {
                             break;
                         }
                     }
-                    if (lastUserMessage) {
-                        lastUserMessage.content.text = 'Error: Could not get a response.';
+                    if (lastUserMessage && 'text' in lastUserMessage.content) {
+                        (lastUserMessage.content as TextBlock).text = 'Error: Could not get a response.';
                     }
                 }
                 return { ...prev, [selectedChatId]: updatedSession as ChatSession };
@@ -214,10 +214,16 @@ function App() {
     
     const handleNewChat = async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/v1/sessions/user/2', { // Assuming user_id is 2
+            const initialMessageContent = "Hello, start a new chat!"; // Default initial message
+            const payload = {
+                user_id: 2, // Assuming user_id is 2
+                initial_message: initialMessageContent
+            };
+
+            const response = await fetch('http://localhost:8000/api/v1/sessions/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: "New Chat" }), // Provide a default title
+                body: JSON.stringify(payload),
             });
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);

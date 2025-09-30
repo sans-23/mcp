@@ -3,6 +3,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
+from schemas.chat import LLMOutputBlock
 
 def create_mcp_agent_executor(llm_instance: ChatOpenAI, tools_list: List[Any]) -> Optional[AgentExecutor]:
     """Creates and returns an agent executor."""
@@ -27,7 +28,7 @@ async def initialize_global_agent(llm_instance: ChatOpenAI, tools_list: List[Any
     executor = create_mcp_agent_executor(llm_instance, tools_list)
     return executor
 
-async def get_agent_response(agent_executor: AgentExecutor, user_input: str, chat_history: List[BaseMessage]) -> Tuple[str, List[str]]:
+async def get_agent_response(agent_executor: AgentExecutor, user_input: str, chat_history: List[BaseMessage], llm_instance: ChatOpenAI) -> Tuple[LLMOutputBlock, List[str]]:
     """Gets a response from the agent and returns the text and tools used."""
     agent_input = {"input": user_input, "chat_history": chat_history}
     response_parts = ""
@@ -43,8 +44,18 @@ async def get_agent_response(agent_executor: AgentExecutor, user_input: str, cha
 
     except Exception as e:
         print(f"💥 Agent Execution Error: {e}")
-        response_parts = "I apologize, the AI agent encountered an error."
+        response_parts = f"I apologize, the AI agent encountered an error. {e}"
     
+    print(f"Agent response parts: {response_parts}")
+    structured_llm = llm_instance.with_structured_output(LLMOutputBlock)
+    pro = "You are an AI assistant. " \
+    "Your responses should be structured as an array of content blocks, which can be either plain text or React components. " \
+    "When presenting data analysis, statistics, or any information that can be visually represented, automatically generate a React component to render a suitable chart or graph (e.g., histogram, bar chart, line chart). " \
+    "For React components, ensure the `code` field of the `ReactBlock` contains a string representing a default export of a React functional component. For example: '''export default function MyComponent() { return <div>Hello</div>; }'''. " \
+    "Always provide some introductory and concluding text around any React components to make the conversation flow naturally. " \
+    "Also, it should be compatible with this theme :root {font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; line-height: 1.5; font-weight: 400; color-scheme: light dark; color: rgba(255, 255, 255, 0.87); background-color: #242424; font-synthesis: none; }"
+    
+    structured_response = await structured_llm.ainvoke(pro + response_parts)
     unique_tool_names = sorted(list(set(tool_names_used)))
 
-    return response_parts.strip(), unique_tool_names
+    return structured_response, unique_tool_names

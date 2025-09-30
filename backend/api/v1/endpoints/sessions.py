@@ -7,6 +7,7 @@ from db.session import get_db_session
 from services.agent import get_agent_response # Removed _agent_executor import
 from langchain.agents import AgentExecutor # type: ignore
 from services.message_converter import db_messages_to_lc_messages
+from langchain_openai import ChatOpenAI
 
 router = APIRouter()
 
@@ -16,11 +17,18 @@ async def get_agent_executor_dependency(request: Request) -> AgentExecutor:
         raise HTTPException(status_code=503, detail="Agent is not initialized.")
     return executor
 
+async def get_llm_instance_dependency(request: Request) -> ChatOpenAI:
+    llm_instance = request.app.state.llm_instance
+    if llm_instance is None:
+        raise HTTPException(status_code=503, detail="LLM is not initialized.")
+    return llm_instance
+
 @router.post("/", response_model=ChatSessionResponse, status_code=201)
 async def create_session(
     session_data: SessionCreate, 
     db: AsyncSession = Depends(get_db_session),
-    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency)
+    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency),
+    llm_instance: ChatOpenAI = Depends(get_llm_instance_dependency)
 ):
     """Starts a new chat session for a user."""
         
@@ -32,12 +40,12 @@ async def create_session(
         db, session_data.user_id, session_data.initial_message
     )
     
-    ai_response_text, tool_names_used = await get_agent_response(
-        agent_executor, session_data.initial_message, []
+    ai_response_content, tool_names_used = await get_agent_response(
+        agent_executor, session_data.initial_message, [], llm_instance
     )
     
     await chat_crud.add_ai_message_to_session(
-        db, new_session.id, ai_response_text, tool_names_used
+        db, new_session.id, ai_response_content, tool_names_used
     )
     
     messages = await chat_crud.get_chat_messages(db, new_session.id)
@@ -55,7 +63,8 @@ async def create_session(
 async def send_message(
     message_data: MessageRequest, 
     db: AsyncSession = Depends(get_db_session),
-    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency)
+    agent_executor: AgentExecutor = Depends(get_agent_executor_dependency),
+    llm_instance: ChatOpenAI = Depends(get_llm_instance_dependency)
 ):
     """Sends a new message to an existing chat session."""
         
@@ -73,12 +82,12 @@ async def send_message(
         db, message_data.session_id, message_data.content
     )
     
-    ai_response_text, tool_names_used = await get_agent_response(
-        agent_executor, message_data.content, lc_history
+    ai_response_content, tool_names_used = await get_agent_response(
+        agent_executor, message_data.content, lc_history, llm_instance # Pass llm_instance here
     )
     
     ai_message = await chat_crud.add_ai_message_to_session(
-        db, message_data.session_id, ai_response_text, tool_names_used
+        db, message_data.session_id, ai_response_content, tool_names_used
     )
     
     return MessageResponse(

@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
     print(llm_instance)
 
     if llm_instance:
+        app.state.llm_instance = llm_instance  # Store the LLM instance in the app state
         app.state.agent_executor = await initialize_global_agent(
             llm_instance, 
             tools_list

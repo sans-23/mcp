@@ -3,6 +3,7 @@ from sqlalchemy.future import select
 from models.chat import ChatSession, ChatMessage
 from uuid import uuid4
 from typing import List
+from schemas.chat import LLMOutputBlock
 
 async def create_chat_session(db: AsyncSession, user_id: int, initial_message: str):
     session_id = str(uuid4())
@@ -24,12 +25,12 @@ async def create_chat_session(db: AsyncSession, user_id: int, initial_message: s
     
     return new_session, user_message
 
-async def add_ai_message_to_session(db: AsyncSession, session_id: str, ai_response_text: str, tools_used: List[str] = None):
+async def add_ai_message_to_session(db: AsyncSession, session_id: str, ai_response_content: LLMOutputBlock, tools_used: List[str] = None):
     """Adds an AI message to a session, optionally including tools used."""
     ai_message = ChatMessage(
         chat_session_id=session_id,
         role="ai",
-        content={"text": ai_response_text.strip()},
+        content=ai_response_content.model_dump(),
         tool_used=", ".join(tools_used) if tools_used else None
     )
     db.add(ai_message)
