@@ -6,9 +6,10 @@ from db.session import engine
 from api.v1.api import api_router
 from services.llm import initialize_llm
 from services.tools import setup_tools
-from services.agent import initialize_global_agent
+from services.agent import create_mcp_agent_executor
 import os
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
+import logging
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,17 +24,14 @@ async def lifespan(app: FastAPI):
             config.LLM_MODEL_NAME
         )
     except ValueError as e:
-        print(f"❌ Error initializing LLM: {e}")
+        logging.error(f"❌ Error initializing LLM: {e}")
         llm_instance = None
 
     tools_list = await setup_tools(llm_instance)
 
     if llm_instance:
         app.state.llm_instance = llm_instance  # Store the LLM instance in the app state
-        app.state.agent_executor = await initialize_global_agent(
-            llm_instance, 
-            tools_list
-        )
+        app.state.agent_executor = create_mcp_agent_executor(llm_instance, tools_list)
         if app.state.agent_executor is None:
             print("❌ Agent Executor was not created.")
     else:

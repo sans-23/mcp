@@ -34,6 +34,7 @@ services:
       LLM_MODEL_NAME: ${LLM_MODEL_NAME}
       CHROMA_HOST: chroma
       CHROMA_PORT: 8000
+      GITHUB_COPILOT_TOKEN: ${GITHUB_COPILOT_TOKEN}
     depends_on:
       - postgres_db
       - chroma

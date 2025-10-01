@@ -4,6 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain.agents import create_openai_tools_agent, AgentExecutor
 from langchain_core.messages import AIMessage, HumanMessage, BaseMessage
 from schemas.chat import LLMOutputBlock
+import logging
 
 def create_mcp_agent_executor(llm_instance: ChatOpenAI, tools_list: List[Any]) -> Optional[AgentExecutor]:
     """Creates and returns an agent executor."""
@@ -21,11 +22,8 @@ def create_mcp_agent_executor(llm_instance: ChatOpenAI, tools_list: List[Any]) -
 
     agent = create_openai_tools_agent(llm=llm_instance, tools=tools_list, prompt=prompt)
     executor = AgentExecutor(agent=agent, tools=tools_list, verbose=True)
+    executor = executor.with_config({"run_name": "Jarvis"})
     print("✅ Agent Executor created successfully.")
-    return executor
-
-async def initialize_global_agent(llm_instance: ChatOpenAI, tools_list: List[Any]) -> Optional[AgentExecutor]:
-    executor = create_mcp_agent_executor(llm_instance, tools_list)
     return executor
 
 async def get_agent_response(agent_executor: AgentExecutor, user_input: str, chat_history: List[BaseMessage], llm_instance: ChatOpenAI) -> Tuple[LLMOutputBlock, List[str]]:
@@ -46,7 +44,6 @@ async def get_agent_response(agent_executor: AgentExecutor, user_input: str, cha
         print(f"💥 Agent Execution Error: {e}")
         response_parts = f"I apologize, the AI agent encountered an error. {e}"
     
-    print(f"Agent response parts: {response_parts}")
     structured_llm = llm_instance.with_structured_output(LLMOutputBlock)
     pro = "You are an AI assistant. " \
     "Your responses should be structured as an array of content blocks, which can be either plain text or React components. " \
@@ -56,6 +53,6 @@ async def get_agent_response(agent_executor: AgentExecutor, user_input: str, cha
     "Also, it should be compatible with this theme :root {font-family: system-ui, Avenir, Helvetica, Arial, sans-serif; line-height: 1.5; font-weight: 400; color-scheme: light dark; color: rgba(255, 255, 255, 0.87); background-color: #242424; font-synthesis: none; }"
     
     structured_response = await structured_llm.ainvoke(pro + response_parts)
-    unique_tool_names = sorted(list(set(tool_names_used)))
+    unique_tool_names = list(set(tool_names_used))
 
     return structured_response, unique_tool_names

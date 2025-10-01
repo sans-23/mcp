@@ -178,17 +178,18 @@ def add_to_chroma(chunks: List[Document], collection_name: str) -> Tuple[int, in
     return len(existing_ids), added
 
 
-def populate_source(resource_name: str) -> None:
+def populate_source(resource_name: str) -> int:
     if not _is_chroma_available():
         print("⚠️ Chroma server is not reachable, skipping vector database population.")
-        return
+        return 1
     documents = load_documents_for_source(resource_name)
     if not documents:
         print(f"No documents found for RAG population for source '{resource_name}'.")
-        return
+        return 2
     chunks = split_documents(documents)
     existing, added = add_to_chroma(chunks, collection_name=resource_name)
     print(f"[{resource_name}] Chroma existing docs: {existing}, newly added: {added}")
+    return 0
 
 
 def main(argv: List[str]) -> int:
@@ -198,22 +199,24 @@ def main(argv: List[str]) -> int:
 
     if not _is_chroma_available():
         print("⚠️ Chroma server is not reachable, skipping vector database population.")
-        return
+        return 1
 
     if args.resource_name:
-        populate_source(args.resource_name)
-        return 0
+        return populate_source(args.resource_name)
 
     sources = list_sources()
     if not sources:
         print("No sources configured. Nothing to populate.")
         return 0
 
+    overall_code = 0
     for s in sources:
         rn = s.get("resource_name")
         if rn:
-            populate_source(rn)
-    return 0
+            code = populate_source(rn)
+            if code != 0:
+                overall_code = code
+    return overall_code
 
 
 if __name__ == "__main__":

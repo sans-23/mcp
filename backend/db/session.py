@@ -1,10 +1,10 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from dotenv import load_dotenv
-from core.config import DATABASE_URL
+from core.config import DATABASE_URL, SQLALCHEMY_ECHO
 
 # Create the asynchronous engine
-engine = create_async_engine(DATABASE_URL, echo=True)
+engine = create_async_engine(DATABASE_URL, echo=SQLALCHEMY_ECHO)
 
 # Create a session maker to manage sessions
 AsyncSessionLocal = async_sessionmaker(
