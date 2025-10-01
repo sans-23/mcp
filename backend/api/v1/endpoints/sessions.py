@@ -11,13 +11,13 @@ from langchain_openai import ChatOpenAI
 
 router = APIRouter()
 
-async def get_agent_executor_dependency(request: Request) -> AgentExecutor:
+def get_agent_executor_dependency(request: Request) -> AgentExecutor:
     executor = request.app.state.agent_executor
     if executor is None:
         raise HTTPException(status_code=503, detail="Agent is not initialized.")
     return executor
 
-async def get_llm_instance_dependency(request: Request) -> ChatOpenAI:
+def get_llm_instance_dependency(request: Request) -> ChatOpenAI:
     llm_instance = request.app.state.llm_instance
     if llm_instance is None:
         raise HTTPException(status_code=503, detail="LLM is not initialized.")
