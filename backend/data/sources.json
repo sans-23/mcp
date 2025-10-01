@@ -1,27 +1,27 @@
 [
   {
     "resource_name": "k8s_docs",
-    "resource_description": "Kubernetes docs for agentic RAG",
+    "resource_description": "Authoritative Kubernetes documentation covering core concepts (Pods, Deployments, Services, Ingress), cluster operations, scheduling, networking, storage, and best practices. Use for accurate, production-grade guidance and CLI examples (kubectl) across versions.",
     "type": "web",
     "path": "https://kubernetes.io/docs/home/"
   },
   {
     "resource_name": "monopoly_rules",
-    "resource_description": "Monopoly rulebook PDF",
+    "resource_description": "Official Monopoly rulebook with gameplay setup, turn order, property transactions, Chance/Community Chest effects, jail rules, houses/hotels, auctions, and end-game conditions. Use for precise rules clarifications and edge cases.",
     "type": "pdf",
-    "path": "data/monopoly.pdf"
+    "path": "monopoly.pdf"
   },
   {
     "resource_name": "fastapi_docs",
-    "resource_description": "FastAPI docs",
+    "resource_description": "FastAPI framework documentation focusing on path operations, dependency injection, Pydantic models, validation, async I/O, background tasks, middleware, and OpenAPI generation. Use for Python web API design patterns and examples.",
     "type": "pdf",
-    "path": "data/fastapi.pdf"
+    "path": "fastapi.pdf"
   },
   {
     "resource_name": "springboot_docs",
-    "resource_description": "Springboot docs",
+    "resource_description": "Spring Boot reference including auto-configuration, starters, configuration properties, MVC/WebFlux, data access (JPA), Actuator, testing, and deployment. Use for Java microservice patterns and production hardening tips.",
     "type": "pdf",
-    "path": "data/springboot.pdf"
+    "path": "springboot.pdf"
   }
 ]
 

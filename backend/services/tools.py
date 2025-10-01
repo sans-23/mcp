@@ -3,6 +3,8 @@ from langchain_mcp_adapters.client import MultiServerMCPClient # type: ignore
 from langchain.tools import Tool # type: ignore
 from core import config
 from services.rag import query_vector_database
+import json
+import os
 
 def _run_rag_query(query: str, llm: Any) -> str:
     """
@@ -27,10 +29,28 @@ async def setup_tools(llm: Any) -> List[Any]:
     except Exception as e:
         print(f"❌ Error setting up MCP tools: {e}")
 
-    rag_tool = Tool(
-        name="RAG_System",
-        func=lambda query: query_vector_database(query, llm)[0],
-        description="Doc for monopoly rules/fastapi/springboot. Use this to answer questions about the rules of Monopoly rules/fastapi/springboot",
-    )
+    # Create one RAG tool per source (namespace) so the agent can pick the right one
+    sources = []
+    sources_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "sources.json")
+    try:
+        with open(sources_path, "r") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                sources = data
+    except Exception as e:
+        print(f"❌ Error reading sources.json for RAG tools: {e}")
 
-    return mcp_tools + [rag_tool]
+    rag_tools: List[Any] = []
+    for src in sources:
+        resource_name = src.get("resource_name", "")
+        description = src.get("resource_description", "")
+        if not resource_name:
+            continue
+        tool = Tool(
+            name=f"RAG_{resource_name}",
+            func=lambda query, rn=resource_name: query_vector_database(query, llm, namespace=rn)[0],
+            description=f"RAG over '{resource_name}'. {description}",
+        )
+        rag_tools.append(tool)
+
+    return mcp_tools + rag_tools

@@ -7,7 +7,6 @@ from api.v1.api import api_router
 from services.llm import initialize_llm
 from services.tools import setup_tools
 from services.agent import initialize_global_agent
-from services.rag import ensure_vector_database
 import os
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 
@@ -28,11 +27,6 @@ async def lifespan(app: FastAPI):
         llm_instance = None
 
     tools_list = await setup_tools(llm_instance)
-
-    # Initialize/ensure RAG database (hosted Chroma). Only adds missing docs.
-    ensure_vector_database()
-
-    print(llm_instance)
 
     if llm_instance:
         app.state.llm_instance = llm_instance  # Store the LLM instance in the app state
