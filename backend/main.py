@@ -7,7 +7,7 @@ from api.v1.api import api_router
 from services.llm import initialize_llm
 from services.tools import setup_tools
 from services.agent import initialize_global_agent
-from services.rag import populate_vector_database
+from services.rag import ensure_vector_database
 import os
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 
@@ -29,12 +29,8 @@ async def lifespan(app: FastAPI):
 
     tools_list = await setup_tools(llm_instance)
 
-    # Initialize RAG database
-    pdf_path = "rag/data/monopoly.pdf"  # Adjust path as necessary
-    if os.path.exists(pdf_path):
-        await populate_vector_database(pdf_path)
-    else:
-        print(f"Warning: PDF file not found at {pdf_path}. RAG database will not be populated.")
+    # Initialize/ensure RAG database (hosted Chroma). Only adds missing docs.
+    ensure_vector_database()
 
     print(llm_instance)
 

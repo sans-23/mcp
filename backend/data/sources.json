@@ -1,0 +1,27 @@
+[
+  {
+    "resource_name": "k8s_docs",
+    "resource_description": "Kubernetes docs for agentic RAG",
+    "type": "web",
+    "path": "https://kubernetes.io/docs/home/"
+  },
+  {
+    "resource_name": "monopoly_rules",
+    "resource_description": "Monopoly rulebook PDF",
+    "type": "pdf",
+    "path": "data/monopoly.pdf"
+  },
+  {
+    "resource_name": "fastapi_docs",
+    "resource_description": "FastAPI docs",
+    "type": "pdf",
+    "path": "data/fastapi.pdf"
+  },
+  {
+    "resource_name": "springboot_docs",
+    "resource_description": "Springboot docs",
+    "type": "pdf",
+    "path": "data/springboot.pdf"
+  }
+]
+

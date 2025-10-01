@@ -6,8 +6,11 @@ langchain_openai
 langchain_mcp_adapters
 sqlalchemy[asyncio]
 pypdf
-langchain
-chromadb
+langchain_chroma
 langchain-community
 langchain-openai
+langchain_huggingface
 sentence-transformers
+unstructured
+beautifulsoup4
+httpx
